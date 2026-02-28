@@ -1,0 +1,59 @@
+# 0️⃣ Minimal VPC & Subnet to make references work
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
+  tags = {
+    Name = "faizal-vpc"
+  }
+}
+
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
+  map_public_ip_on_launch = true
+  availability_zone       = "ap-southeast-1a"  # Singapore AZ
+
+  tags = {
+    Name = "faizal-public-subnet"
+  }
+}
+
+# 1️⃣ Find latest Amazon Linux 2023 AMI
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*-x86_64"]
+  }
+}
+
+# 2️⃣ Security Group
+resource "aws_security_group" "allow_ssh" {
+  name        = "faizal-terraform-security-group"
+  description = "Allow SSH inbound"
+  vpc_id      = aws_vpc.main.id
+}
+
+# 3️⃣ Ingress rule (can stay separate)
+resource "aws_vpc_security_group_ingress_rule" "allow_tls_ipv4" {
+  security_group_id = aws_security_group.allow_ssh.id
+  cidr_ipv4         = "0.0.0.0/0"  
+  from_port         = 22
+  ip_protocol       = "tcp"
+  to_port           = 22
+}
+
+# 4️⃣ EC2 Instance
+resource "aws_instance" "public" {
+  ami                         = data.aws_ami.amazon_linux.id
+  instance_type               = "t2.micro"
+  subnet_id                   = aws_subnet.public.id
+  associate_public_ip_address = true
+  key_name                    = "faizal-key-pair"
+  vpc_security_group_ids      = [aws_security_group.allow_ssh.id]
+
+  tags = {
+    Name = "faizal-ec2"
+  }
+}
