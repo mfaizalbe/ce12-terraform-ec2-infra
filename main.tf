@@ -1,20 +1,25 @@
+locals {
+  prefix = "faizal"
+}
+
 resource "aws_instance" "public" {
-  ami                         = "ami-0ac0e4288aa341886" # find the AMI ID of Amazon Linux 2023  
-  instance_type               = "t2.micro"
-  subnet_id                   = "subnet-07613369be510e0d0"  #Public Subnet ID, e.g. subnet-xxxxxxxxxxx
+  count                       = var.instance_count
+  ami                         = data.aws_ami.amazon_linux.id # find the AMI ID of Amazon Linux 2023  
+  instance_type               = var.instance_type
+  subnet_id                   = data.aws_subnets.example.ids[0]  #Public Subnet ID, e.g. subnet-xxxxxxxxxxx
   associate_public_ip_address = true
   key_name                    = "faizal-key-pair" #Change to your keyname, e.g. jazeel-key-pair
   vpc_security_group_ids = [aws_security_group.allow_ssh.id]
  
   tags = {
-    Name = "faizal-ec2"    #Prefix your own name, e.g. jazeel-ec2
+    Name = "${local.prefix}-ec2-${var.env}-${count.index + 1}"    #Prefix your own name, e.g. jazeel-ec2
   }
 }
 
 resource "aws_security_group" "allow_ssh" {
-  name        = "faizal-terraform-security-group" #Security group name, e.g. jazeel-terraform-security-group
+  name        = "${local.prefix}-sg-ec2-${var.env}" #Security group name, e.g. jazeel-terraform-security-group
   description = "Allow SSH inbound"
-  vpc_id      = "vpc-024ab25ff63a3d405"  #VPC ID (Same VPC as your EC2 subnet above), E.g. vpc-xxxxxxx
+  vpc_id      = data.aws_vpc.selected.id  #VPC ID (Same VPC as your EC2 subnet above), E.g. vpc-xxxxxxx
 }
 
 resource "aws_vpc_security_group_ingress_rule" "allow_tls_ipv4" {
