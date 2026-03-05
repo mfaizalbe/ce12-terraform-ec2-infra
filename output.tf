@@ -9,3 +9,8 @@ output "ami_id" {
 output "subnet_ids" {
     value = data.aws_subnets.example.id
 }
+
+# Public DNS for all instances
+output "ec2_public_dns" {
+  value = aws_instance.public[*].public_dns
+}
